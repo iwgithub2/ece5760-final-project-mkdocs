@@ -1,0 +1,7 @@
+github_users:
+  - iwgithub2
+
+repo_description_lines_max: 2
+
+github_repos:
+  - iwgithub2/ece5760-final-project-mkdocs

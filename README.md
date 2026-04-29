@@ -1,25 +1,35 @@
 # ECE 5760 Final Project Site
 
-Static GitHub Pages site built with MkDocs.
+Static GitHub Pages site built with Jekyll and the al-folio template.
 
 ## Edit Content
 
-Update Markdown files in `docs/`.
+- Home page: `_pages/about.md`
+- Main pages: `_pages/*.md`
+- Blog-style notes: `_posts/YYYY-MM-DD-title.md`
+- Project cards/pages: `_projects/*.md`
+- News snippets: `_news/*.md`
+- Site metadata/navigation: `_config.yml`
+
+Most content updates are Markdown plus YAML front matter.
+
+## Local Preview
 
 ```sh
-uv run --with mkdocs==1.6.1 mkdocs serve
+bundle install
+bundle exec jekyll serve
 ```
 
-Open the local URL printed by MkDocs and edit Markdown as needed.
+Open `http://localhost:4000/ece5760-final-project-mkdocs/`.
 
 ## Build
 
 ```sh
-uv run --with mkdocs==1.6.1 mkdocs build --strict
+JEKYLL_ENV=production bundle exec jekyll build
 ```
 
 ## Deploy
 
-Push to `main`. GitHub Actions builds `docs/` into static HTML and deploys the `site/` artifact to GitHub Pages.
+Push to `main`. GitHub Actions builds the static `_site/` output and deploys it to GitHub Pages.
 
-In GitHub repository settings, set Pages source to GitHub Actions.
+In repository Settings -> Pages, set source to GitHub Actions.
