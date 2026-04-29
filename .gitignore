@@ -1,0 +1,8 @@
+site/
+.cache/
+.pip-cache/
+.uv-cache/
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
