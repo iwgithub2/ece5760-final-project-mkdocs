@@ -1,6 +1,6 @@
 ---
-layout: about
-title: "ECE 5760: Bayesian-network structure learning on FPGA"
+layout: introduction
+title: "introduction"
 permalink: /
 subtitle: By Irwin Wang and Joseph Wan
 
