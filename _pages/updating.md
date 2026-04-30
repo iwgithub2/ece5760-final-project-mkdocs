@@ -13,7 +13,7 @@ Update content in these files:
 
 | Path | Purpose |
 | --- | --- |
-| `_pages/about.md` | Home page. |
+| `_pages/introduction.md` | Home page. |
 | `_pages/*.md` | Top-level pages. |
 | `_posts/YYYY-MM-DD-title.md` | Blog-style project notes. |
 | `_projects/*.md` | Project cards and detail pages. |

@@ -4,7 +4,7 @@ Static GitHub Pages site built with Jekyll and the al-folio template.
 
 ## Edit Content
 
-- Home page: `_pages/about.md`
+- Home page: `_pages/introduction.md`
 - Main pages: `_pages/*.md`
 - Blog-style notes: `_posts/YYYY-MM-DD-title.md`
 - Project cards/pages: `_projects/*.md`

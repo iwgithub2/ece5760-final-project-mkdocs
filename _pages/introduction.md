@@ -1,6 +1,6 @@
 ---
-layout: introduction
-title: ECE 5760: Bayesian-network structure learning on FPGA 
+layout: about
+title: "ECE 5760: Bayesian-network structure learning on FPGA"
 permalink: /
 subtitle: By Irwin Wang and Joseph Wan
 
@@ -36,4 +36,4 @@ In this project, we developed a combined software and hardware pipeline that off
 
 Here is a demonstration of our FPGA-accelerated Bayesian network learning system:
 
-{% include video.html url="https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1" %}
+{% include video.liquid path="https://www.youtube.com/embed/dQw4w9WgXcQ" class="img-fluid rounded z-depth-1" %}
