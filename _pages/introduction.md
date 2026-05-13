@@ -36,4 +36,4 @@ In this project, we developed a combined software and hardware pipeline that off
 
 Here is a demonstration of our FPGA-accelerated Bayesian network learning system:
 
-{% include video.liquid path="https://www.youtube.com/embed/dQw4w9WgXcQ" class="img-fluid rounded z-depth-1" %}
+{% include video.liquid path="https://youtu.be/SyGYvctclgU?si=SZieXrVqehzIGZqK" class="img-fluid rounded z-depth-1" %}
