@@ -4,7 +4,7 @@ title: updating
 permalink: /updating/
 description: How to edit and publish the site.
 nav: true
-nav_order: 5
+nav_order: 13
 ---
 
 ## Edit Markdown

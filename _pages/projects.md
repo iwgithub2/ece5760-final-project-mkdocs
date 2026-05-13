@@ -4,7 +4,7 @@ title: projects
 permalink: /projects/
 description: Project tracks and implementation areas.
 nav: true
-nav_order: 3
+nav_order: 11
 display_categories: []
 horizontal: false
 ---
