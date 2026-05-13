@@ -4,7 +4,7 @@ title: program and hardware design
 permalink: /program-hardware-design/
 description: Software, FPGA design, reused code, and failed attempts.
 nav: true
-nav_order: 5
+nav_order: 4
 ---
 
 ## Program Details

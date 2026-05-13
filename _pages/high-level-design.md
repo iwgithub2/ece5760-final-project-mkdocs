@@ -4,7 +4,7 @@ title: high-level design
 permalink: /high-level-design/
 description: Architecture, math, rationale, and hardware/software partitioning.
 nav: true
-nav_order: 4
+nav_order: 3
 ---
 
 ## Rationale and Sources

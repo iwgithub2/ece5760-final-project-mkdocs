@@ -4,7 +4,7 @@ title: references
 permalink: /references/
 description: Datasheets, vendor docs, borrowed code/designs, and background sources.
 nav: true
-nav_order: 10
+nav_order: 9
 ---
 
 TODO: Add references used.

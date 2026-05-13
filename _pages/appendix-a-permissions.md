@@ -4,7 +4,7 @@ title: appendix A permissions
 permalink: /appendix-a-permissions/
 description: Required course website and YouTube permission statements.
 nav: true
-nav_order: 8
+nav_order: 7
 ---
 
 ## Project on the Course Page

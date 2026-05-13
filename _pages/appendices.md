@@ -4,7 +4,7 @@ title: appendices
 permalink: /appendices/
 description: Code listings, schematics, and team contributions.
 nav: true
-nav_order: 9
+nav_order: 8
 ---
 
 ## Code and Hardware Listings

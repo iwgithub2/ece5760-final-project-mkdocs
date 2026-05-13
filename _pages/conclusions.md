@@ -4,7 +4,7 @@ title: conclusions
 permalink: /conclusions/
 description: Results analysis, standards, and intellectual property.
 nav: true
-nav_order: 7
+nav_order: 6
 ---
 
 ## Expectations Versus Results
