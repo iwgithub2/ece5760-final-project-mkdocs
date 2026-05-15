@@ -47,10 +47,10 @@ Together, these three functions accounted for **over 80%** of the total executio
 
 In addition to `gprof`, we also used the `perf` Linux profiler to analyze a longer, 30-million iteration run on a local machine. The flame graph shows that the `score_order_backend` dominates the call stack. Specifically, the mathematical operations inside the `log_add` function (such as `log1p` and `exp`) and the iterative bitwise masking inside `check_compatibility` create a massive bottleneck.
 
-![alt text](images/flame%20graph.png)
+{% include figure.liquid path="assets/img/flame_graph.png" class="img-fluid rounded z-depth-1" alt="alt text" %}
 
 ### Hardware/Software Partitioning Strategy
-![alt text](<images/Top level.png>)
+{% include figure.liquid path="assets/img/top_level.png" class="img-fluid rounded z-depth-1" alt="alt text" %}
 
 Based on the profiling data, the architecture was divided to maximize throughput while also keeping hardware simple. As illustrated in the top-level block diagram above, the system is split into two distinct domains communicating via AXI bridges on the DE1-Soc Avalon bus.
 
