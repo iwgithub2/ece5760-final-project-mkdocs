@@ -9,11 +9,11 @@ nav_order: 6
 
 ## Appendix A: Permissions
 
-### Project on the Course Page
+#### Project on the Course Page
 
 > The group approves this report for inclusion on the course website.
 
-### Project on the Course YouTube Channel
+#### Project on the Course YouTube Channel
 
 > The group approves the video for inclusion on the course youtube channel.
 

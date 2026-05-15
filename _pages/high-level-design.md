@@ -47,7 +47,7 @@ Together, these three functions accounted for **over 80%** of the total executio
 
 In addition to `gprof`, we also used the `perf` Linux profiler to analyze a longer, 30-million iteration run on a local machine. The flame graph shows that the `score_order_backend` dominates the call stack. Specifically, the mathematical operations inside the `log_add` function (such as `log1p` and `exp`) and the iterative bitwise masking inside `check_compatibility` create a massive bottleneck.
 
-![alt text](images\image.png)
+![alt text](images/flame%20graph.png)
 
 ### Hardware/Software Partitioning Strategy
 ![alt text](<images/Top level.png>)
