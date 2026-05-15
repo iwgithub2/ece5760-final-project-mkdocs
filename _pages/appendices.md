@@ -4,8 +4,18 @@ title: appendices
 permalink: /appendices/
 description: Code listings, schematics, and team contributions.
 nav: true
-nav_order: 8
+nav_order: 6
 ---
+
+## Appendix A: Permissions
+
+### Project on the Course Page
+
+> The group approves this report for inclusion on the course website.
+
+### Project on the Course YouTube Channel
+
+> The group approves the video for inclusion on the course youtube channel.
 
 ## Code and Hardware Listings
 

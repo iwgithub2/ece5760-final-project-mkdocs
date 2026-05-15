@@ -2,40 +2,49 @@
 layout: page
 title: program and hardware design
 permalink: /program-hardware-design/
-description: Software, FPGA design, reused code, and failed attempts.
+description: Software and FPGA design.
 nav: true
-nav_order: 4
+nav_order: 3
 ---
 
-## Program Details
+## Software Design
 
-The software preprocessing path computes the tables used by the FPGA sampler. It generates candidate parent sets, calculates local scores, converts scores into fixed-point log-space values, and emits binary/hex files for hardware initialization.
+The software running on the HPS is responsible for managing the MCMC structure learning process. It bridges the gap between the raw dataset, the parallel FPGA compute, and the end user. The software flow can be broken down into four primary stages: offline precomputation, initialization of FPGA memory, graph extraction, and then an interactive demonstration.
 
-Representative preprocessing command:
+### 1. Precomputation of BDeu Scores
 
-```sh
-uv run python preprocess_bn.py \
-  --data cleaned-datasets/asia_samples.csv \
-  --output-dir out_bn_tables \
-  --target-type discrete \
-  --max-parent-size 4 \
-  --max-candidates-per-node 10 \
-  --bootstrap-iters 20 \
-  --min-stability-frequency 0.3 \
-  --score bdeu \
-  --equivalent-sample-size 1.0 \
-  --fixed-point q16.16 \
-  --emit-hex
-```
+Calculating the Bayesian Dirichlet equivalent uniform (BDeu) score for a given parent set requires iterating over the entire dataset and computing expensive log-gamma functions. Implementing this in hardware would be complicated and resource-intensive, which is why we choose to handle this step in software before the MCMC algorithm runs.
 
-TODO: Describe the final software modules, file formats, and tricky implementation details.
+To ensure the hardware recieves relevant scores without exceeding memory limits:
 
-Likely tricky parts:
+* **Stratified Candidate Selection:** A PC-side precomputation engine (`precompute.c`) calculates scores for candidate parent sets up to $k$ maximum parents. Because the FPGA RAM depth per node is limited, the software uses a stratified sorting strategy to retain only the best candidates (up to a maximum of 255 per node).
+* **Hardware Formatting:** The resulting database is saved as a binary file. When the main HPS application (`mcmc_fixed.c`) loads this file, it converts the floating-point local scores into a Q16.16 fixed-point format.
+* **Data Transfer:** These fixed-point scores and their corresponding one-hot encoded parent bitmasks are written directly to the FPGA's M10K BRAMs via the Heavyweight AXI Bridge. To make the number of candidates configurable in software, a mask of `0xFFFFFFFF` is appended to the end of each node's list to tell the hardware scorer when to stop fetching candidates.
 
-- Keeping parent-set masks aligned with score-table entries.
-- Choosing fixed-point widths that preserve scoring behavior.
-- Validating hardware score output against floating-point software reference output.
-- Preventing overflow or underflow in log-space accumulation.
+### 2. PIO Communication and Memory Mapping
+
+To interact with the FPGA, the ARM processor maps the physical hardware addresses into its virtual memory space. The Lightweight AXI Bridge is utilized for control and status registers using Parallel I/O (PIO) interfaces:
+
+* **Outputs to FPGA:** The HPS configures the MCMC run by writing to PIO registers, passing the random number generator `seed`, total `iterations`, `active_nodes`, and a `node_mask`. Once configured, the software toggles a `reset` line and sends the `start` signal.
+* **Inputs from FPGA:** The software polls a `done` signal to wait for the hardware to finish. Upon completion, it reads back the `best_score`, the `clk_count` to calculate execution time, and the optimized topological order, which is packed into 32-bit words to save memory bandwidth.
+
+### 3. Graph Extraction from the Best Ordering
+
+Because the MCMC search space relies on topological orderings rather than explicit graphs, the FPGA returns an optimized node ordering, not the physical edges of the DAG. Once the HPS retrieves this optimal order, it must extract the final graph. The software performs a single pass over the precomputed candidate database for each node:
+
+1. It looks at the node's position in the returned order.
+2. It filters out any candidate parent sets that contain nodes appearing after the current node in the topological order (checking for compatibility).
+3. It selects the compatible parent set with the highest local score.
+
+By combining these optimal parent sets across all nodes, the software reconstructs the final Directed Acyclic Graph (DAG) and evaluates its precision, recall, and overall score against the known edge list.
+
+### 4. Interactive Graph Display and Inference Demo
+
+To make the system verifiable and interactive, the software features a demonstration using a VGA subsystem on the FPGA and the command-line interface for user input.
+
+* **VGA Graph Rendering:** Using the AXI bridge mapped to the SDRAM and FPGA On-Chip Memory, the software writes to pixel and character buffers to draw the learned Bayesian Network on a connected VGA monitor. It dynamically spaces the nodes into layers based on their topological depth, rendering them as labeled circles with directed lines indicating causal relationships.
+* **Interactive Probability Inference:** Through the terminal, the software builds empirical Conditional Probability Tables (CPTs) by scanning the dataset using the newly learned graph structure. Users can input specific evidence (e.g., `Age=2, Accident=1`) and query target nodes. The HPS utilizes a multi-threaded likelihood weighting algorithm to estimate the conditional probabilities based on the user's queries.
+
 
 ## Hardware Details
 

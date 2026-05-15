@@ -3,8 +3,8 @@ layout: page
 title: implementation
 permalink: /implementation/
 description: Preprocessing outputs and hardware boundary.
-nav: true
-nav_order: 2
+nav: false
+# nav_order: 2
 ---
 
 ## Preprocessing
