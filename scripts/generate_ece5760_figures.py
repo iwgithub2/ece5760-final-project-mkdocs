@@ -76,6 +76,34 @@ def savefig(name):
     return path
 
 
+def add_score_key(ax, *, loc="lower right", include_f1=False):
+    lines = [
+        "Score 1 = recall: correct edges found / true edges",
+        "Score 2 = precision: correct edges / predicted edges",
+        "Score 3 = average score",
+    ]
+    if include_f1:
+        lines.append("F1 balances precision and recall")
+
+    anchors = {
+        "lower right": (0.98, 0.04, "right", "bottom"),
+        "lower left": (0.02, 0.04, "left", "bottom"),
+        "upper right": (0.98, 0.96, "right", "top"),
+        "upper left": (0.02, 0.96, "left", "top"),
+    }
+    x, y, ha, va = anchors[loc]
+    ax.text(
+        x,
+        y,
+        "\n".join(lines),
+        transform=ax.transAxes,
+        ha=ha,
+        va=va,
+        fontsize=7.2,
+        bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.9},
+    )
+
+
 def load_timing():
     return pd.read_excel(WORKBOOK, sheet_name="Final Project", header=None)
 
@@ -142,8 +170,9 @@ def plot_insurance_runtime_and_score(timing):
     ax.set_xscale("log")
     ax.set_ylim(0, 0.92)
     ax.set_xlabel("MCMC iterations")
-    ax.set_ylabel("Score 3 / average score")
+    ax.set_ylabel("Score 3 (average score)")
     ax.set_title("Insurance score convergence")
+    add_score_key(ax, loc="lower right")
     ax.legend()
 
     return savefig("insurance_runtime_score_convergence.png")
@@ -181,8 +210,9 @@ def plot_parallelization_convergence(timing):
     ax.set_xscale("log")
     ax.set_ylim(0, 0.9)
     ax.set_xlabel("MCMC iterations")
-    ax.set_ylabel("Score 3 / average score")
+    ax.set_ylabel("Score 3 (average score)")
     ax.set_title("Parallelization improves early convergence, then converges")
+    add_score_key(ax, loc="lower right")
     ax.legend(ncol=2)
     return savefig("parallel_versions_score_convergence.png")
 
@@ -191,14 +221,15 @@ def plot_parallel_score_components(timing):
     df = extract_parallel_table(timing)
     sub = df[df["parallel_versions"] == 4].sort_values("iterations")
     fig, ax = plt.subplots(figsize=(7.4, 4.4))
-    ax.plot(sub["iterations"], sub["score1"], "o-", label="Score 1", color="#5a6f8f")
-    ax.plot(sub["iterations"], sub["score2"], "s-", label="Score 2", color="#44947b")
-    ax.plot(sub["iterations"], sub["score3"], "^-", label="Score 3 / average", color="#d45f3a", linewidth=2.3)
+    ax.plot(sub["iterations"], sub["score1"], "o-", label="Score 1: recall", color="#5a6f8f")
+    ax.plot(sub["iterations"], sub["score2"], "s-", label="Score 2: precision", color="#44947b")
+    ax.plot(sub["iterations"], sub["score3"], "^-", label="Score 3: average", color="#d45f3a", linewidth=2.3)
     ax.set_xscale("log")
     ax.set_ylim(0, 1.0)
     ax.set_xlabel("MCMC iterations")
     ax.set_ylabel("Score")
     ax.set_title("Score components for 4-way parallel Insurance run")
+    add_score_key(ax, loc="lower right")
     ax.legend()
     return savefig("insurance_score_components_4way.png")
 
@@ -258,11 +289,13 @@ def plot_ml_tradeoff(timing):
     axes[0].set_ylabel("F1 score")
     axes[0].set_title("Accuracy/runtime tradeoff")
     axes[0].text(0.02, 0.03, "Bubble area scales with table size", transform=axes[0].transAxes, fontsize=8)
+    add_score_key(axes[0], loc="lower right", include_f1=True)
 
     axes[1].set_xscale("log")
     axes[1].set_xlabel("Score table size (bytes)")
     axes[1].set_ylabel("F1 score")
     axes[1].set_title("Accuracy/table-size tradeoff")
+    add_score_key(axes[1], loc="upper left", include_f1=True)
 
     legend_handles = [
         plt.Line2D([0], [0], marker="o", color="w", label="Asia", markerfacecolor="#444", markersize=8),
@@ -298,6 +331,7 @@ def plot_ml_vs_fixed_software(timing):
     axes[0].set_ylim(0, 1.0)
     axes[0].set_ylabel("F1 score")
     axes[0].set_title("ML pruning can preserve accuracy")
+    add_score_key(axes[0], loc="lower right", include_f1=True)
     axes[0].legend()
 
     fixed_runtime = [fixed.loc[d, "mcmc_sec_mean"] for d in datasets]
