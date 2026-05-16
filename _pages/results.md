@@ -19,7 +19,7 @@ The end-to-end run measured in the timing sheet shows a large speedup from movin
 
 {% include figure.liquid path="assets/img/results/insurance_runtime_score_convergence.png" class="img-fluid rounded z-depth-1" alt="Insurance runtime and score convergence" %}
 
-For the Insurance dataset, both the FPGA/HPS path and the software baseline scale roughly linearly with iteration count on the log-log runtime plot. The FPGA/HPS path remains consistently faster over the measured range. The score convergence plot shows that more iterations improve the FPGA/HPS path substantially at low iteration counts, and the result approaches the software baseline once the number of samples is large enough.
+For the Insurance dataset, both the FPGA/HPS path and the software baseline scale roughly linearly with iteration count on the log-log runtime plot. The FPGA/HPS path remains consistently faster over the measured range. The score convergence plot shows that more iterations improve the FPGA/HPS path substantially at low iteration counts, and the result approaches the software baseline once the number of samples is large enough. The remaining disconnect is likely caused by finite-sample MCMC behavior rather than a fundamentally different scoring objective. The hardware path uses fixed-point arithmetic, a reduced-fidelity lookup table for nonlinear log-space terms, and its own random proposal stream, while the software baseline uses higher-precision arithmetic and a different execution path. At low iteration counts, those small numerical and proposal-order differences can move the sampler through different regions of order space. As the number of samples increases, both paths have more chances to explore high-scoring orders, so the scores move closer together.
 
 {% include figure.liquid path="assets/img/results/parallel_versions_score_convergence.png" class="img-fluid rounded z-depth-1" alt="Parallel versions score convergence" %}
 
@@ -49,13 +49,15 @@ The main safety constraints are correctness and bounded operation. The HPS limit
 
 The user workflow is split into preprocessing, hardware execution, and result interpretation. The HPS loads the precomputed score table, configures the FPGA with parameters such as seed and iteration count, starts the sampler, and then reads back the best score and topological order. The final order is converted back into a graph in software and displayed through the VGA demo.
 
-TODO: Add exact command-line usage and input dataset format.
+Loading a dataset from bnlearn is fairly straightforward because the preprocessing flow can convert a known Bayesian-network dataset into the local parent-set and score tables needed by the hardware. The harder part is getting both high accuracy and low latency. MCMC is a limiting technique by itself because it depends on enough random proposals to explore the order space well. If the iteration budget is small, the sampler may return quickly but miss better network structures; if the iteration budget is large, accuracy improves but latency rises. In practice, usability depends on tuning the candidate-parent limit, score-table size, lookup-table fidelity, and number of parallel chains for the dataset being tested.
 
 ## Resource Utilization
 
 {% include figure.liquid path="assets/img/results/resource_utilization_parallel_configs.png" class="img-fluid rounded z-depth-1" alt="Resource utilization across parallel hardware configurations" %}
 
 The area data shows the hardware cost of parallelism. The one-chain design uses 37% ALM utilization and 52% LAB utilization, while the four-chain design reaches 90% ALM utilization and 100% LAB utilization. This explains why the final design must balance parallelism against available FPGA fabric.
+
+M10K block usage was another hard limit. The one-chain, 32-bit by 1024-entry configuration used 204 of 397 M10K blocks, or 51% of the device. The two-chain version with the same 32-bit by 1024-entry lookup-table depth used 396 of 397 M10K blocks, effectively filling block memory. To reach three or four parallel chains, the design had to reduce lookup-table fidelity and memory footprint. The four-chain configuration used a 16-bit by 512-entry table and fit at 336 of 397 M10K blocks, or 85%. This means parallelization was constrained by memory as much as by logic: more chains required a smaller and lower-precision LUT, which helps fit the FPGA but also contributes to the accuracy gap between hardware and software.
 
 {% include figure.liquid path="assets/img/results/alm_component_breakdown.png" class="img-fluid rounded z-depth-1" alt="ALM component breakdown across hardware configurations" %}
 
@@ -71,27 +73,14 @@ The main limitation is resource pressure. Parallelism improves early convergence
 
 The ML-based pruning results were mixed but useful. Candidate pruning can reduce runtime and memory size dramatically, especially when using mutual information or ensemble rankers to keep only promising parent sets. However, the Insurance results show that pruning can also reduce final graph quality if important parent sets are removed. A future design could use adaptive pruning or dataset-specific candidate limits instead of one fixed policy.
 
+If we were doing the project again, we would think about scaling and modularity much earlier. Getting the full software-to-hardware path working was already difficult, and the original design had to be modified before parallelization could work cleanly. The final results also show that parallelization is not a complete solution: it helps most when the iteration count is small, but the benefit shrinks as the chains converge toward similar scores. A next version should focus on making the sampler easier to scale, improving the proposal strategy, and reducing memory pressure rather than only adding more replicated chains.
+
 ### Standards
 
-TODO: State applicable standards or conventions.
-
-Possible items:
-
-- Verilog/SystemVerilog coding conventions
-- Avalon/MM or HPS/FPGA interface conventions, if used
-- fixed-point numeric format conventions
-- dataset/file-format conventions
+The design follows the normal ECE 5760 DE1-SoC hardware/software conventions: memory-mapped HPS-to-FPGA communication, synchronous Verilog/SystemVerilog hardware, fixed reset behavior, and explicit register-level control from software. Numeric values are represented in fixed-point log space so that the FPGA can replace repeated probability multiplications with additions and lookup-table approximations. Dataset handling follows the bnlearn-style benchmark workflow: the software preprocessing step converts a named dataset into fixed-size score tables before hardware execution.
 
 ### Intellectual Property Considerations
 
-TODO: Complete final IP analysis.
+We did not reuse outside code or another complete design for the Bayesian-network MCMC accelerator or preprocessing pipeline. The only borrowed course code was ECE 5760 VGA drawing/display support. The project used the standard Intel/Altera DE1-SoC toolchain and platform components available for the course board, but it did not rely on a confidential third-party design or sample part. No nondisclosure agreement was required.
 
-Questions to answer:
-
-- Did the project reuse code or another design?
-- Did it use Intel/Altera IP?
-- Did it use public-domain or open-source code?
-- Was anything reverse engineered?
-- Were any patent or trademark issues relevant?
-- Was any nondisclosure agreement required?
-- Are there patent opportunities?
+The project is not reverse engineering an existing commercial design. Bayesian-network structure learning, MCMC sampling, fixed-point arithmetic, and FPGA acceleration are all established ideas in the literature, including prior work on reconfigurable computing for Bayesian networks. We are not aware of a specific patent opportunity from this course implementation. The main intellectual-property concern is citation and attribution, so the report references the background papers, bnlearn dataset source, vendor documentation, and ECE 5760 course material used for context or support code.
