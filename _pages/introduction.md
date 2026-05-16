@@ -20,7 +20,7 @@ latest_posts:
 
 We built an FPGA-accelerated Bayesian-network structure-learning system that uses software preprocessing and hardware-parallel MCMC scoring to explore probabilistic graph structures faster than a software-only approach.
 
-For our final project in ECE 5760, we focused on accelerating the learning of Bayesian network structures using an FPGA (DE1-SoC platform). Bayesian networks are a foundational (OG) machine learning method that model probabilistic relationships between variables using directed graphs. Despite the rise of modern deep learning approaches, Bayesian networks remain highly relevant due to their interpretability and ability to capture explicit dependencies between real-world variables.
+For our final project in ECE 5760, we focused on accelerating the learning of Bayesian network structures using an FPGA (DE1-SoC platform). Bayesian networks are a foundational machine learning method that model probabilistic relationships between variables using directed graphs. Despite the rise of modern deep learning approaches, Bayesian networks remain highly relevant due to their interpretability and ability to capture explicit dependencies between real-world variables.
 
 Unlike CNNs or DNNs, which often act as black boxes, Bayesian networks provide a structured and explainable representation of data through conditional relationships. This makes them particularly useful in domains where understanding the underlying system is as important as prediction accuracy. However, learning the optimal graph structure is computationally expensive, making it a strong candidate for hardware acceleration.
 
