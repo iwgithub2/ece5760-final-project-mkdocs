@@ -1,6 +1,6 @@
 ---
 layout: page
-title: appendices and references
+title: appendices
 permalink: /appendices/
 description: Code listings, schematics, team contributions, permissions, and references.
 nav: true

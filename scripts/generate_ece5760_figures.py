@@ -78,9 +78,9 @@ def savefig(name):
 
 def add_score_key(ax, *, loc="lower right", include_f1=False):
     lines = [
-        "Score 1 = recall: correct edges found / true edges",
-        "Score 2 = precision: correct edges / predicted edges",
-        "Score 3 = average score",
+        "Recall = correct edges found / true edges",
+        "Precision = correct edges / predicted edges",
+        "Average score = mean of recall and precision",
     ]
     if include_f1:
         lines.append("F1 balances precision and recall")
@@ -170,7 +170,7 @@ def plot_insurance_runtime_and_score(timing):
     ax.set_xscale("log")
     ax.set_ylim(0, 0.92)
     ax.set_xlabel("MCMC iterations")
-    ax.set_ylabel("Score 3 (average score)")
+    ax.set_ylabel("Average score")
     ax.set_title("Insurance score convergence")
     add_score_key(ax, loc="lower right")
     ax.legend()
@@ -210,7 +210,7 @@ def plot_parallelization_convergence(timing):
     ax.set_xscale("log")
     ax.set_ylim(0, 0.9)
     ax.set_xlabel("MCMC iterations")
-    ax.set_ylabel("Score 3 (average score)")
+    ax.set_ylabel("Average score")
     ax.set_title("Parallelization improves early convergence, then converges")
     add_score_key(ax, loc="lower right")
     ax.legend(ncol=2)
@@ -221,14 +221,14 @@ def plot_parallel_score_components(timing):
     df = extract_parallel_table(timing)
     sub = df[df["parallel_versions"] == 4].sort_values("iterations")
     fig, ax = plt.subplots(figsize=(7.4, 4.4))
-    ax.plot(sub["iterations"], sub["score1"], "o-", label="Score 1: recall", color="#5a6f8f")
-    ax.plot(sub["iterations"], sub["score2"], "s-", label="Score 2: precision", color="#44947b")
-    ax.plot(sub["iterations"], sub["score3"], "^-", label="Score 3: average", color="#d45f3a", linewidth=2.3)
+    ax.plot(sub["iterations"], sub["score1"], "o-", label="Recall", color="#5a6f8f")
+    ax.plot(sub["iterations"], sub["score2"], "s-", label="Precision", color="#44947b")
+    ax.plot(sub["iterations"], sub["score3"], "^-", label="Average score", color="#d45f3a", linewidth=2.3)
     ax.set_xscale("log")
     ax.set_ylim(0, 1.0)
     ax.set_xlabel("MCMC iterations")
-    ax.set_ylabel("Score")
-    ax.set_title("Score components for 4-way parallel Insurance run")
+    ax.set_ylabel("Metric value")
+    ax.set_title("Recall, precision, and average for 4-way parallel Insurance run")
     add_score_key(ax, loc="lower right")
     ax.legend()
     return savefig("insurance_score_components_4way.png")

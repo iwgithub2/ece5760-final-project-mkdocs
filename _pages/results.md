@@ -29,7 +29,7 @@ The parallel-version experiment shows the expected behavior for sampling. With s
 
 {% include figure.liquid path="assets/img/results/insurance_score_components_4way.png" class="img-fluid rounded z-depth-1" alt="Insurance score components for four-way parallel run" %}
 
-The score-component plot separates the three score columns from the spreadsheet for the four-way parallel Insurance run. Score 1 is recall, meaning the percent of correct edges recovered from the reference graph. Score 2 is precision, meaning the percent of predicted edges that were actually correct. Score 3 is treated as the average score because it tracks between recall and precision across the iteration sweep. All three scores improve sharply from 100 to 5,000 iterations, then flatten, which suggests diminishing returns after the sampler has reached a strong region of the order space.
+The score-component plot separates recall, precision, and average score for the four-way parallel Insurance run. Recall is the percent of correct edges recovered from the reference graph. Precision is the percent of predicted edges that were actually correct. The average score tracks between recall and precision across the iteration sweep. All three improve sharply from 100 to 5,000 iterations, then flatten, which suggests diminishing returns after the sampler has reached a strong region of the order space.
 
 {% include figure.liquid path="assets/img/results/ml_vs_fixed_software.png" class="img-fluid rounded z-depth-1" alt="ML-pruned candidates versus fixed candidate baseline" %}
 
