@@ -146,7 +146,7 @@ def plot_insurance_runtime_and_score(timing):
     ax.set_title("Insurance score convergence")
     ax.legend()
 
-    return savefig("insurance_runtime_score_convergence.png")
+    return savefig("insurance_runtime_score_convergence_v2.png")
 
 
 def extract_parallel_table(timing):
@@ -184,7 +184,7 @@ def plot_parallelization_convergence(timing):
     ax.set_ylabel("Average score")
     ax.set_title("Parallelization improves early convergence, then converges")
     ax.legend(ncol=2)
-    return savefig("parallel_versions_score_convergence.png")
+    return savefig("parallel_versions_score_convergence_v2.png")
 
 
 def plot_parallel_score_components(timing):
@@ -214,7 +214,7 @@ def plot_parallel_score_components(timing):
             fontsize=10,
             va="center",
         )
-    return savefig("insurance_score_components_4way.png")
+    return savefig("insurance_score_components_4way_v2.png")
 
 
 def extract_ml_table(timing):
@@ -283,7 +283,7 @@ def plot_ml_tradeoff(timing):
         plt.Line2D([0], [0], marker="s", color="w", label="Insurance", markerfacecolor="#444", markersize=8),
     ]
     axes[1].legend(handles=legend_handles, loc="lower right")
-    return savefig("ml_pruning_accuracy_tradeoff.png")
+    return savefig("ml_pruning_accuracy_tradeoff_v2.png")
 
 
 def plot_ml_vs_fixed_software(timing):
@@ -328,7 +328,7 @@ def plot_ml_vs_fixed_software(timing):
         config = ml.loc[dataset, "config"]
         axes[0].text(dataset_idx + width / 2, ml_f1[dataset_idx] + 0.025, config.replace("_", "\n"), ha="center", va="bottom", fontsize=7)
 
-    return savefig("ml_vs_fixed_software.png")
+    return savefig("ml_vs_fixed_software_v2.png")
 
 
 def extract_resources(resources):
