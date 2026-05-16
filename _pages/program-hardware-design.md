@@ -79,7 +79,17 @@ Another feature of our LFSR is that because the number of active nodes can vary,
 
 ### Log-Add LUT
 
-The log-sum-exp function, $\log(e^a + e^b)$, is heavily utilized for accumulating the BDeu scores of multiple compatible parent sets. Doing this natively with floating-point exponents and logarithms in hardware is prohibitively expensive in terms of logic elements and routing complexity. To bypass this, the `log_add` module simplifies the math using the identity: $\log(e^a + e^b) = \max(a, b) + \log(1 + e^{-|a - b|})$.
+The log-sum-exp function is heavily utilized for accumulating the BDeu scores of multiple compatible parent sets:
+
+$$
+\operatorname{logadd}(a, b) = \log(e^a + e^b)
+$$
+
+Doing this natively with floating-point exponents and logarithms in hardware is prohibitively expensive in terms of logic elements and routing complexity. To bypass this, the `log_add` module rewrites the operation as:
+
+$$
+\operatorname{logadd}(a, b) = \max(a, b) + \log\left(1 + e^{-|a-b|}\right)
+$$
 
 This approach converts the complex mathematics to a small, bounded fractional addition. The module calculates this using a 2-stage pipeline and a precomputed lookup table (LUT) based on Q16.16 fixed-point arithmetic.
 
@@ -89,7 +99,13 @@ We chose to pipeline as the M10K BRAM blocks use synchronous reads. Without a pi
 
 The choice of using 32-bit fixed-point as our data type is motivated by the fact that it eliminates the need for floating-point IP cores, reducing DSP block utilization. The Q16.16 format (1 signed bit, 15 integer bits, 16 fractional bits) was chosen as it is well balanced for our application. A 16-bit integer portion allows for ranges between -32,768 and +32,767, and since BDeu scores are log-likelihoods that accumulate over 32 nodes, this range prevents overflow during the MCMC score summations. As for the fractional bits, 16 bits of fractional precision yields a resolution of roughly $0.000015$, which provides enough precision to differentiate between competing candidate parent sets. Furthermore, a 32-bit total word length aligns well with a 32-bit unsigned integer in C, simplifying data transfer from the HPS.
 
-As for the M10K, we initially utilized a 1024-word by 32-bit LUT. However, because each M10K block in the FPGA holds roughly 10 kilobits, a 32-kilobit LUT would require at least 4 M10K blocks per node scorer. With 32 parallel scorers, we decided to optimize the area by reducing our LUT depth, eventually settling with a 512 word by 16 bit design. Because the $\log(1 + e^{-x})$ term evaluates to a maximum of $\approx 0.693$ (when $x = 0$), it only occupies the fractional portion of the Q16.16 word. Thus, by storing only the 16 fractional bits, the LUT size shrinks to 8,192 bits, allowing it to fit into a single M10K block per scorer without losing accuracy.
+As for the M10K, we initially utilized a 1024-word by 32-bit LUT. However, because each M10K block in the FPGA holds roughly 10 kilobits, a 32-kilobit LUT would require at least 4 M10K blocks per node scorer. With 32 parallel scorers, we decided to optimize the area by reducing our LUT depth, eventually settling with a 512-word by 16-bit design. Because the correction term
+
+$$
+\log(1 + e^{-x})
+$$
+
+has a maximum value of approximately 0.693 when \(x = 0\), it only occupies the fractional portion of the Q16.16 word. Thus, by storing only the 16 fractional bits, the LUT size shrinks to 8,192 bits, allowing it to fit into a single M10K block per scorer without losing accuracy.
 
 ### Node Scorer
 

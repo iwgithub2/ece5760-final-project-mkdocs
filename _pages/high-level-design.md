@@ -21,8 +21,6 @@ The project idea came from the observation that Bayesian-network structure learn
 
 The acceleration target is the inner scoring loop of an MCMC sampler over topological orderings. Instead of directly exploring individual graph structures, the sampler explores node orders. For each proposed order, the system scores the parent sets that are compatible with that order and then applies the Metropolis-Hastings acceptance rule.
 
-TODO: Add exact sources for the project idea, papers, lecture notes, codebases, and prior designs.
-
 ## Bayesian Networks
 
 A Bayesian network is a probabilistic graphical model represented by a directed acyclic graph (DAG). Each node represents a random variable, and each directed edge represents a conditional dependence. The graph structure lets the joint probability distribution factor into smaller conditional probability terms:
@@ -61,19 +59,19 @@ The acceptance rule is based on the Metropolis-Hastings algorithm. Better propos
 
 The scoring path works in log space to avoid underflow from very small probabilities and to replace multiplication with addition. A key accumulation operation is:
 
-```text
-node_score = node_score + log(1 + exp(local_score - node_score))
-```
+$$
+\mathrm{node\_score}_{new}
+= \mathrm{node\_score}_{old}
++ \log\left(1 + e^{\mathrm{local\_score} - \mathrm{node\_score}_{old}}\right)
+$$
 
 In hardware, the non-linear `log(1 + exp(x))` term can be approximated with a small lookup table and piecewise behavior. Large negative inputs contribute approximately zero, and large positive inputs approximate the identity function.
 
 | Input range | Approximation |
 | --- | --- |
-| Large negative `x` | `log(1 + exp(x)) ~= 0` |
+| Large negative `x` | $\log(1 + e^x) \approx 0$ |
 | Near zero `x` | lookup-table value |
-| Large positive `x` | `log(1 + exp(x)) ~= x` |
-
-TODO: Add the final posterior-order formula and define each term.
+| Large positive `x` | $\log(1 + e^x) \approx x$ |
 
 ## Why the Math Maps to Hardware
 
