@@ -83,11 +83,11 @@ The mathematical structure therefore matches the hardware structure. The softwar
 
 ## Role of Arm and FPGA
 
-The design of the Bayesian Network Learner uses a hardware/software co-design approach, leveraging the DE1-SoC platform to partition tasks between the Hard Processor System (HPS), which features a ARM Cortex-A9 processor, and the FPGA. This partitioning strategy means that we can distribute sequential, memory-heavy, and user-interactive tasks to the CPU while using the FPGA to accelerate highly parallelizable, compute-bound  tasks.
+The design of the Bayesian Network Learner uses a hardware/software co-design approach, leveraging the DE1-SoC platform to partition tasks between the Hard Processor System (HPS), which features an ARM Cortex-A9 processor, and the FPGA. This partitioning strategy means that we can distribute sequential, memory-heavy, and user-interactive tasks to the CPU while using the FPGA to accelerate highly parallelizable, compute-bound tasks.
 
 ### Software Profiling
 
-To determine the most effective system partitioning, an initial implementation of the MCMC algorithm using exclusively software was profiled on the HPS. Using `gprof`, the execution time of a standard run (100,000 iterations on the 8 node [Asia](https://www.bnlearn.com/bnrepository/discrete-small.html#asia) graph) was analyzed to identify bottlenecks.
+To determine the most effective system partitioning, an initial implementation of the MCMC algorithm using exclusively software was profiled on the HPS. Using `gprof`, the execution time of a standard run (100,000 iterations on the 8-node [Asia](https://www.bnlearn.com/bnrepository/discrete-small.html#asia) graph) was analyzed to identify bottlenecks.
 
 The profiling results revealed that the majority of CPU cycles were consumed by the core MCMC evaluation loop:
 
@@ -95,21 +95,21 @@ The profiling results revealed that the majority of CPU cycles were consumed by 
 * **`score_order` (23.75%):** Iterates through candidate parent sets for each node to calculate the total log-likelihood of the proposed ordering.
 * **`log_add` (15.31%):** Performing logarithmic addition of likelihoods to accumulate a node's score.
 
-Together, these three functions accounted for **over 80%** of the total execution time of 10.6 seconds. Because MCMC structure learning requires at least hundreds of thousands iterations, and sometimes magnitudes higher, running this sequentially on an ARM processor limits practical performance. However, scoring individual nodes within a proposed order is an inherently independent operation, making it an ideal candidate for parallelism on an FPGA.
+Together, these three functions accounted for **over 80%** of the total execution time of 10.6 seconds. Because MCMC structure learning requires at least hundreds of thousands of iterations, and sometimes magnitudes higher, running this sequentially on an ARM processor limits practical performance. However, scoring individual nodes within a proposed order is an inherently independent operation, making it an ideal candidate for parallelism on an FPGA.
 
 In addition to `gprof`, we also used the `perf` Linux profiler to analyze a longer, 30-million iteration run on a local machine. The flame graph shows that the `score_order_backend` dominates the call stack. Specifically, the mathematical operations inside the `log_add` function (such as `log1p` and `exp`) and the iterative bitwise masking inside `check_compatibility` create a massive bottleneck.
 
-{% include figure.liquid path="assets/img/flame_graph.png" class="img-fluid rounded z-depth-1" alt="alt text" %}
+{% include figure.liquid path="assets/img/flame_graph.png" class="img-fluid rounded z-depth-1" alt="alt text" title="Flame graph of MCMC run in software"%}
 
 ### Hardware/Software Partitioning Strategy
-{% include figure.liquid path="assets/img/top_level.png" class="img-fluid rounded z-depth-1" alt="alt text" %}
+{% include figure.liquid path="assets/img/top_level.png" class="img-fluid rounded z-depth-1" alt="alt text" title="Top level block diagram"%}
 
-Based on the profiling data, the architecture was divided to maximize throughput while also keeping hardware simple. As illustrated in the top-level block diagram above, the system is split into two distinct domains communicating via AXI bridges on the DE1-Soc Avalon bus.
+Based on the profiling data, the architecture was divided to maximize throughput while also keeping hardware simple. As illustrated in the top-level block diagram above, the system is split into two distinct domains communicating via AXI bridges on the DE1-SoC Avalon bus.
 
 **1. HPS Software Responsibilities:**
 The ARM processor manages the setup, orchestration, and user interface.
 
-* **Precompute Scores (Software):** Calculating the BDeu scores for all valid parent sets requires parsing the dataset and performing complex Gamma function calculations (`calculate_bde_score`, which took ~18% of the CPU time). This happens once per dataset, and is kept in software then communicated to the FPGA.
+* **Precompute Scores (Software):** Calculating the BDeu scores for all valid parent sets requires parsing the dataset and performing complex Gamma function calculations (`calculate_bde_score`, which took ~18% of the CPU time). This happens once per dataset, and is kept in software, then communicated to the FPGA.
 * **Initialize and Start FPGA:** The HPS transfers the precomputed score database to the FPGA's M10K BRAMs through the AXI Bridge. Configuration parameters such as the RNG seed, number of iterations, and active nodes are passed through a Lightweight AXI Bridge using Memory-Mapped PIO outputs.
 * **Graph Extraction and Display:** Once the FPGA completes its runs, the HPS reads back the best topological order via PIO inputs. It then extracts the final DAG, runs the interactive probability inference program through the terminal, and renders the graph visually using the VGA Subsystem.
 

@@ -15,7 +15,7 @@ The software running on the HPS is responsible for managing the MCMC structure l
 
 Calculating the Bayesian Dirichlet equivalent uniform (BDeu) score for a given parent set requires iterating over the entire dataset and computing expensive log-gamma functions. Implementing this in hardware would be complicated and resource-intensive, which is why we choose to handle this step in software before the MCMC algorithm runs.
 
-To ensure the hardware recieves relevant scores without exceeding memory limits:
+To ensure the hardware receives relevant scores without exceeding memory limits:
 
 * **Stratified Candidate Selection:** A PC-side precomputation engine (`precompute.c`) calculates scores for candidate parent sets up to $k$ maximum parents. Because the FPGA RAM depth per node is limited, the software uses a stratified sorting strategy to retain only the best candidates (up to a maximum of 255 per node).
 * **Hardware Formatting:** The resulting database is saved as a binary file. When the main HPS application (`mcmc_fixed.c`) loads this file, it converts the floating-point local scores into a Q16.16 fixed-point format.
@@ -45,68 +45,74 @@ To make the system verifiable and interactive, the software features a demonstra
 * **VGA Graph Rendering:** Using the AXI bridge mapped to the SDRAM and FPGA On-Chip Memory, the software writes to pixel and character buffers to draw the learned Bayesian Network on a connected VGA monitor. It dynamically spaces the nodes into layers based on their topological depth, rendering them as labeled circles with directed lines indicating causal relationships.
 * **Interactive Probability Inference:** Through the terminal, the software builds empirical Conditional Probability Tables (CPTs) by scanning the dataset using the newly learned graph structure. Users can input specific evidence (e.g., `Age=2, Accident=1`) and query target nodes. The HPS utilizes a multi-threaded likelihood weighting algorithm to estimate the conditional probabilities based on the user's queries.
 
-## Hardware/Software Optimizations
+## RTL Design
 
-Several optimizations were used across the software and hardware boundary to make the system practical on the DE1-SoC.
+Our FPGA accelerator is designed to maximize parallelism and minimize the latency of the MCMC loop. Our RTL is built from modular blocks, consisting of a pseudo-random number generator, a custom arithmetic unit, parallel node scorers, a central controller, and a top-level system wrapper. In this section, we will start with the smallest pieces and show how they are used to build up our system.
 
-### Parallel Hardware Scoring
+### Linear-Feedback Shift Register (LFSR)
 
-The main hardware optimization is parallelizing the score calculation across nodes. Scoring a proposed order requires checking which parent sets are valid for each node and then accumulating the corresponding local scores. These node-level checks are mostly independent, so the FPGA can replicate scoring logic and evaluate multiple nodes at the same time instead of processing them sequentially on the CPU.
+The `lfsr_32bit` module provides the pseudo-random numbers required for the MCMC proposal generation, in addition to the Metropolis-Hastings acceptance criteria. We generate a 32-bit length sequence using the Galois polynomial: $x^{32} + x^{22} + x^{2} + x^{1} + 1$. The LFSR is seedable from the HPS so that we can create reproducible runs. In each clock cycle where it is enabled, the LFSR outputs a 32-bit random vector. The lower bits are used to select two random nodes (`rand_i` and `rand_j`) for topological swapping, while the upper 16 bits (`rand_u`) provide a uniform random variable used to calculate the probability of accepting a worse proposal.
 
-This parallel structure is a good match for the FPGA fabric. The HPS would need to repeatedly loop over nodes and parent-set candidates, while the FPGA can perform compatibility checks, table lookups, and fixed-point additions with dedicated logic. This reduces the repeated work inside the MCMC loop, which is the part of the algorithm that runs many times.
+We chose to use an LFSR as it is a fast, simple way to create pseudo-random numbers. Alternatives, such as the Mersenne Twister, may provide higher statistical quality but also consume significant logic and memory resources. By using an LFSR, we can still produce pseudo-random values while preserving logic elements for the parallel node scorers. For the LFSR design, we chose to use a Galois polynomial, as each XOR operation can be executed in parallel. In comparison, the Fibonacci LFSR propagates multiple XOR gates in the feedback path, increasing latency.
 
-### Machine-Learning Search Optimizations
+Another feature of our LFSR is that because the number of active nodes can vary, the raw random bits must be clamped. For node counts that are a power of two, a simple bitmask is used. For non-power-of-two counts, a modulo operation ensures the generated indices remain within the active node bounds.
 
-The project also uses algorithmic optimizations from Bayesian-network structure learning:
+### Log-Add LUT
 
-* **Order-space MCMC:** The sampler explores topological orderings instead of arbitrary graphs. This reduces the search space and makes every accepted order correspond to an acyclic graph.
-* **Candidate parent-set pruning:** The software keeps only the most useful parent-set candidates for each node, which reduces FPGA memory pressure and avoids wasting hardware cycles on low-quality candidates.
-* **BDeu precomputation:** Expensive score calculations over the raw dataset are performed once in software. The FPGA then reuses those local scores during MCMC sampling.
-* **Log-space scoring:** Scores are converted to log space to avoid probability underflow and to replace repeated multiplications with additions.
+The log-sum-exp function, $\log(e^a + e^b)$, is heavily utilized for accumulating the BDeu scores of multiple compatible parent sets. Doing this natively with floating-point exponents and logarithms in hardware is prohibitively expensive in terms of logic elements and routing complexity. To bypass this, the `log_add` module simplifies the math using the identity: $\log(e^a + e^b) = \max(a, b) + \log(1 + e^{-|a - b|})$.
 
-### Numeric and Memory Optimizations
+This approach converts the complex mathematics to a small, bounded fractional addition. The module calculates this using a 2-stage pipeline and a precomputed lookup table (LUT) based on Q16.16 fixed-point arithmetic.
 
-The score database is converted to Q16.16 fixed-point format before being written to FPGA memory. Fixed-point arithmetic is much cheaper than floating-point arithmetic in custom hardware and uses fewer FPGA resources. The design also uses sentinel masks to mark the end of each node's candidate list, which lets the number of candidates vary by node without requiring a separate control structure for each list.
+We designed our `log_add` module to use two pipelined stages. In stage 1, combinational logic computes the maximum of the two inputs, their absolute difference, and maps the difference to a 9-bit address. Then, in the second stage, the calculated address is used to read a 16-bit fractional value from a ROM, which is stored in M10K memory. This LUT output is then added to the forwarded maximum value.
 
-Data packing also reduces communication overhead. The optimized topological order is packed into 32-bit words before being returned to the HPS, and the HPS reconstructs the final graph in software after the FPGA finishes the sampling run. This keeps the hardware focused on the high-throughput scoring path while leaving more flexible graph formatting and display work to software.
+We chose to pipeline as the M10K BRAM blocks use synchronous reads. Without a pipeline register separating the initial subtraction/comparator logic from the memory read and the final addition, the critical path would stretch across the entire operation, reducing the maximum clock speed and creating a bottleneck for the parallel node scorers.
 
-### Inference and Display Optimizations
+The choice of using 32-bit fixed-point as our data type is motivated by the fact that it eliminates the need for floating-point IP cores, reducing DSP block utilization. The Q16.16 format (1 signed bit, 15 integer bits, 16 fractional bits) was chosen as it is well balanced for our application. A 16-bit integer portion allows for ranges between -32,768 and +32,767, and since BDeu scores are log-likelihoods that accumulate over 32 nodes, this range prevents overflow during the MCMC score summations. As for the fractional bits, 16 bits of fractional precision yields a resolution of roughly $0.000015$, which provides enough precision to differentiate between competing candidate parent sets. Furthermore, a 32-bit total word length aligns well with a 32-bit unsigned integer in C, simplifying data transfer from the HPS.
 
-After structure learning, the HPS performs graph extraction and builds empirical conditional probability tables for the interactive demo. The likelihood-weighting inference step is multi-threaded, which improves responsiveness for user queries. The VGA display is generated by writing directly to mapped pixel and character buffers, avoiding a heavier graphics stack and keeping the demo simple enough to run on the DE1-SoC.
+As for the M10K, we initially utilized a 1024-word by 32-bit LUT. However, because each M10K block in the FPGA holds roughly 10 kilobits, a 32-kilobit LUT would require at least 4 M10K blocks per node scorer. With 32 parallel scorers, we decided to optimize the area by reducing our LUT depth, eventually settling with a 512 word by 16 bit design. Because the $\log(1 + e^{-x})$ term evaluates to a maximum of $\approx 0.693$ (when $x = 0$), it only occupies the fractional portion of the Q16.16 word. Thus, by storing only the 16 fractional bits, the LUT size shrinks to 8,192 bits, allowing it to fit into a single M10K block per scorer without losing accuracy.
 
+### Node Scorer
 
-## Hardware Details
+{% include figure.liquid path="assets/img/node_scorer.png" class="img-fluid rounded z-depth-1" alt="alt text" title="MCMC Node Scorer Block Diagram"%}
 
-The FPGA design stores precomputed parent-set masks and local scores in BRAM. It proposes new node orders, checks which parent sets are valid under the proposed order, accumulates scores for each node, and applies the MCMC acceptance rule.
+As illustrated in the Node Scorer block diagram, the `node_scorer` module is responsible for finding the best valid parent set for a single node. The system instantiates up to 32 of these modules in parallel. Each scorer is directly attached to a dedicated dual-ported M10K block containing that specific node's precomputed candidate database (consisting of 32-bit local scores and 32-bit parent masks). If a single centralized RAM were used, a complex arbiter would be required, and nodes would have to be scored sequentially. By giving each scorer its own dedicated M10K block, we avoid read-port contention. 
 
-Core hardware blocks:
+When triggered by the MCMC Controller, the Scorer FSM streams through its RAM. For each entry, an Enable Logic block checks if the candidate's `parent_mask` is a strict subset of the `allowed_parents` mask (which comes from the proposed topological order). If valid, the score is accumulated using an instantiated `log_add` module.
 
-| Block | Purpose |
-| --- | --- |
-| LFSR/random source | Generates random proposal choices and acceptance thresholds. |
-| Order representation | Stores the current and proposed topological order. |
-| Parent-set memory | Stores candidate parent masks generated by software. |
-| Score memory | Stores fixed-point local scores. |
-| Compatibility logic | Checks whether a parent set is valid for the proposed order. |
-| Per-node score accumulators | Accumulate valid local scores in parallel. |
-| Log-add LUT | Approximates `log(1 + exp(x))`. |
-| MCMC controller | Accepts or rejects proposed orders. |
+Instead of using a fixed loop counter based on the maximum number of parents compiled on the FPGA, the HPS software appends a specialized mask (`0xFFFFFFFF`) to the end of each node's candidate list. When the Scorer FSM finds this mask, it finishes its accumulation. This allows us to perform variable-length execution based on the number of nodes in the network and avoids wasting clock cycles on empty memory addresses.
 
-TODO: Add enough detail that another group could rebuild the design: module names, interfaces, clocking, reset behavior, memory map, and HPS/FPGA communication.
+### MCMC Controller
 
-## External Design and Code References
+{% include figure.liquid path="assets/img/mcmc_controller.png" class="img-fluid rounded z-depth-1" alt="alt text" title="MCMC Controller Block Diagram"%}
 
-TODO: List every external codebase, hardware design, paper implementation, dataset, or course module reused or adapted.
+The `mcmc_controller` serves as the organizer of the accelerator, analyzing changes across the entire graph, as shown in the MCMC Controller block diagram. The FSM operates in the following structure:
 
-For each item, include source name, URL/citation, license or usage permission, what was reused, and what was modified.
+1. **Propose:** Swaps two nodes in the current order based on the LFSR outputs.
+2. **Score:** Broadcasts the new `allowed_parents` masks to all 32 Node Scorers and waits for them to finish.
+3. **Sum:** Uses a multi-cycle `score_accumulator` to sum the 32 individual node scores into a global proposed score.
+4. **Decide:** Compares the proposed score against the current score to accept or reject the topological move.
 
-## Things Tried That Did Not Work
+For our acceptance logic, we want to prevent the MCMC chain from getting stuck in local maxima. For this reason, the controller implements the following acceptance schedule. During early iterations, the acceptance penalty is lessened using shifts, allowing the algorithm to freely explore the search space and accept worse proposals. As the iteration count increases, the acceptance threshold drops, and the FSM becomes increasingly greedy, eventually locking onto the optimal DAG peak.
 
-TODO: Add failed or abandoned approaches.
+While the node scorers operate entirely in parallel, the final score aggregation is done via a multi-cycle accumulator rather than a massive combinational adder tree. This tradeoff adds a few clock cycles to the FSM but significantly reduces the critical path delay, allowing the system to achieve a higher overall clock frequency, and scales well to larger designs.
 
-Candidates:
+### System Wrapper
 
-- Direct graph-space sampling versus order-space sampling.
-- Floating-point hardware scoring versus fixed-point scoring.
-- Different LUT ranges or fixed-point widths.
-- Designs that exceeded timing, memory, or FPGA resource limits.
+The `mcmc_system` module acts as the top-level wrapper, bridging our MCMC accelerator hardware with the DE1-SoC's Avalon Memory-Mapped bus. As will be shown in the next section, one responsibility of `mcmc_system` is to decode a 12-bit address to route memory writes from the HPS to the correct M10K RAM block associated with each node. In addition, it also exposes the control signals (start, seed, iterations, active nodes) and output signals (done, best score, clock count) to the HPS.
+
+The final optimized topological order requires 160 bits of data. To minimize bus overhead, the wrapper packs four 5-bit node identifiers into a single 32-bit Avalon read word. This allows the HPS to read the 32-node graph structure in 8 serialized read cycles. Another critical output for profiling the exact execution time of the FPGA is the clock count. A 32-bit cycle counter was added to the system wrapper, providing cycle-accurate performance independent of the overhead on the HPS.
+
+## Platform Designer Integration
+
+To connect the custom MCMC hardware accelerator to the ARM HPS, the top-level RTL module (`mcmc_system`) was packaged as a custom component using Quartus Platform Designer (formerly known as Qsys). This approach allows the AXI bridge routing, clock routing, and memory mapping to be handled automatically by the Platform Designer interconnect fabric.
+
+{% include figure.liquid path="assets/img/component.png" class="img-fluid rounded z-depth-1" alt="alt text" title="Custom MCMC component in Platform Designer"%}
+
+As shown in the component block diagram, the `mcmc_system_inst` exposes standard interfaces that allow it to act as a memory-mapped peripheral on the Avalon bus. The `avalon_slave_0` interface is what connects directly to the HPS-to-FPGA AXI bridge. It exposes a 12-bit address bus (`avs_address[11..0]`), granting the HPS access to a 4096-word memory space. During the setup phase, the HPS uses this bus to stream the precomputed candidate databases. The `mcmc_system` wrapper decodes the upper bits of the 12-bit address to automatically route the incoming 32-bit `avs_writedata` to the correct dual-ported M10K BRAM block among the 32 parallel node scorers. Upon completion, the HPS performs read operations (`avs_read`) using this same interface. The hardware intercepts specific addresses to return the final 160-bit topological order, packed into 32-bit `avs_readdata` words to minimize bus transaction overhead.
+
+In addition to M10K memory mappings, the component also connects our design to simpler signals that come from standard Parallel I/O (PIO) connections within Platform Designer. These signals are exported using a Conduit interface, which are then connected to the HPS Lightweight AXI bridge.
+
+* **HPS to FPGA:** The software initializes the run by writing to PIO output ports connected to `seed`, `iterations`, `active_nodes`, and the `node_idx_mask`. Once configured, the software toggles `pio_reset` and drives the `start` signal.
+* **FPGA to HPS:** The FPGA reports output status back to PIO input ports. The software spins on the `done` signal, and once asserted, it reads the `best_score` and the `clk_count`. 
+
+By packaging the dual-ported M10Ks and the MCMC controller into this single, configurable Platform Designer component, the hardware/software boundary is kept clean. In our early iterations, we manually instantiated dual-ported M10K blocks in Platform Designer and configured their respective address spaces. Although this worked for small designs, we realized this manual process would not scale as we increased graph sizes. With our custom component, the C code to interface with the FPGA becomes simple to write, and the FPGA top level logic becomes trivial.
