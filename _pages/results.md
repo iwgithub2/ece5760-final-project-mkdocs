@@ -63,6 +63,28 @@ M10K block usage was another hard limit. The one-chain, 32-bit by 1024-entry con
 
 The ALM breakdown shows that LUT logic is the dominant contributor, with registers and combined LUT/register usage also increasing as more chains are added. The result is consistent with the design: parallel scoring replicates compatibility logic, accumulators, and control state.
 
+### Chip Planner Area Views
+
+The Quartus Chip Planner area views below show how each solver configuration maps onto the FPGA fabric. These images are intended to make the resource-pressure trend visible spatially, not only through utilization percentages.
+
+<div class="row">
+  <div class="col-sm-6 mt-3 mt-md-0">
+    {% include figure.liquid path="assets/img/results/chip_planner_1_chain_32b_x1024.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for one-chain solver" %}
+  </div>
+  <div class="col-sm-6 mt-3 mt-md-0">
+    {% include figure.liquid path="assets/img/results/chip_planner_2_chains_32b_x1024.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for two-chain solver" %}
+  </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm-6 mt-3 mt-md-0">
+    {% include figure.liquid path="assets/img/results/chip_planner_3_chains_16b_x1024.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for three-chain solver" %}
+  </div>
+  <div class="col-sm-6 mt-3 mt-md-0">
+    {% include figure.liquid path="assets/img/results/chip_planner_4_chains_16b_x512.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for four-chain solver" %}
+  </div>
+</div>
+
 ## Conclusions
 
 ### Expectations Versus Results

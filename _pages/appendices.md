@@ -19,17 +19,9 @@ nav_order: 4
 
 ## Code and Hardware Listings
 
-TODO: Add commented Verilog and/or program listings, or link to files in the project repository.
+The project code and hardware design files are available in the project repository:
 
-Suggested structure:
-
-- preprocessing script
-- fixed-point scoring code
-- top-level FPGA module
-- MCMC controller
-- LFSR/random generator
-- BRAM/table interfaces
-- testbenches
+[iwgithub2/ece5760-final-project](https://github.com/iwgithub2/ece5760-final-project)
 
 ## External Schematics
 
@@ -39,12 +31,10 @@ TODO: If any external hardware was used, add schematics here.
 
 ## Team Contributions
 
-TODO: List the specific tasks carried out by each team member.
-
 | Team member | Contributions |
 | --- | --- |
-| Irwin Wang | TODO |
-| Joseph Wan | TODO |
+| Irwin Wang | Worked on software testing, initial baselining, and early experiments used for design decisions. This included evaluating fixed-point formats, LUT size, and the tradeoff between numeric fidelity and FPGA resource usage. He also collected much of the experimental data, wrote an initial draft of the parallelized solver, and wrote the C code used to display the output graph. |
+| Joseph Wan | Worked on the overall system design, Quartus integration, and HPS/FPGA bring-up. He wrote much of the C code running on the HPS and spent significant time debugging Platform Designer to integrate the custom IP. He also worked on understanding the Bayesian-network math and tuning parameters to improve final accuracy. |
 
 ## References
 
