@@ -68,20 +68,21 @@ The ALM breakdown shows that LUT logic is the dominant contributor, with registe
 The Quartus Chip Planner area views below show how each solver configuration maps onto the FPGA fabric. These images are intended to make the resource-pressure trend visible spatially, not only through utilization percentages.
 
 <div class="row">
-  <div class="col-sm-6 mt-3 mt-md-0">
+  <div class="col-6 col-lg-3 mt-3 mt-lg-0">
     {% include figure.liquid path="assets/img/results/chip_planner_1_chain_32b_x1024.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for one-chain solver" %}
+    <p class="caption">1-chain solver, 32b x1024 LUT</p>
   </div>
-  <div class="col-sm-6 mt-3 mt-md-0">
+  <div class="col-6 col-lg-3 mt-3 mt-lg-0">
     {% include figure.liquid path="assets/img/results/chip_planner_2_chains_32b_x1024.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for two-chain solver" %}
+    <p class="caption">2-chain solver, 32b x1024 LUT</p>
   </div>
-</div>
-
-<div class="row mt-3">
-  <div class="col-sm-6 mt-3 mt-md-0">
+  <div class="col-6 col-lg-3 mt-3 mt-lg-0">
     {% include figure.liquid path="assets/img/results/chip_planner_3_chains_16b_x1024.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for three-chain solver" %}
+    <p class="caption">3-chain solver, 16b x1024 LUT</p>
   </div>
-  <div class="col-sm-6 mt-3 mt-md-0">
+  <div class="col-6 col-lg-3 mt-3 mt-lg-0">
     {% include figure.liquid path="assets/img/results/chip_planner_4_chains_16b_x512.png" class="img-fluid rounded z-depth-1" alt="Chip Planner area view for four-chain solver" %}
+    <p class="caption">4-chain solver, 16b x512 LUT</p>
   </div>
 </div>
 

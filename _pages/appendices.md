@@ -25,9 +25,7 @@ The project code and hardware design files are available in the project reposito
 
 ## External Schematics
 
-No external hardware beyond the DE1-SoC board is currently documented.
-
-TODO: If any external hardware was used, add schematics here.
+No external hardware was used. The design ran entirely on the DE1-SoC board, so no external schematics are required.
 
 ## Team Contributions
 
